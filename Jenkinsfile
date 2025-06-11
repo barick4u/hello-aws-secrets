@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage('Checkout Code') {
       steps {
-        git branch: 'main', url: 'https://github.com/<your-username>/hello-aws-secrets.git'
+        git branch: 'main', url: 'https://github.com/barick4u/hello-aws-secrets.git'
       }
     }
 
