@@ -1,62 +1,54 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    AWS_CLI = "/opt/homebrew/bin/aws"
-    IMAGE_NAME = "hello-secrets"
-    AWS_REGION = "ap-south-1"
-    SECRET_ID  = "myapp/hello-world"
-  }
-
-  stages {
-    stage('Clone Repo') {
-      steps {
-        git branch: 'main', url: 'https://github.com/barick4u/hello-aws-secrets.git'
-      }
+    environment {
+        AWS_CLI = "/usr/local/bin/aws"  // Adjust if path differs
+        SECRET_ID = "myapp/hello-world"
+        REGION = "ap-south-1"
     }
 
-    stage('Fetch AWS Secrets') {
-      steps {
-        script {
-          def secret = sh(
-            script: "${AWS_CLI} secretsmanager get-secret-value --region ${AWS_REGION} --secret-id ${SECRET_ID} --query SecretString --output text",
-            returnStdout: true
-          ).trim()
-
-          def creds = readJSON text: secret
-          env.MY_SECRET_USER = creds.username
-          env.MY_SECRET_PASS = creds.password
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/barick4u/hello-aws-secrets.git'
+            }
         }
-      }
+
+        stage('Fetch AWS Secret') {
+            steps {
+                script {
+                    def secret = sh(
+                        script: "${AWS_CLI} secretsmanager get-secret-value --region ${REGION} --secret-id ${SECRET_ID} --query SecretString --output text",
+                        returnStdout: true
+                    ).trim()
+                    echo "Fetched secret: ${secret}" // Don't do this in real prod pipelines (for security)
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t hello-aws-secret .'
+            }
+        }
+
+        stage('Scan with Trivy') {
+            steps {
+                sh 'trivy image hello-aws-secret || true'  // ignore failure if Trivy not installed
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh 'docker run -d --name hello-secret-app hello-aws-secret'
+            }
+        }
     }
 
-    stage('Build Docker Image') {
-      steps {
-        sh 'docker build -t $IMAGE_NAME .'
-      }
+    post {
+        always {
+            echo 'Cleaning up Docker containers...'
+            sh 'docker rm -f hello-secret-app || true'
+        }
     }
-
-    stage('Scan with Trivy') {
-      steps {
-        sh 'trivy image $IMAGE_NAME || true'
-      }
-    }
-
-    stage('Run Docker with Secrets') {
-      steps {
-        sh '''
-          docker run --rm \
-          -e MY_SECRET_USER=$MY_SECRET_USER \
-          -e MY_SECRET_PASS=$MY_SECRET_PASS \
-          $IMAGE_NAME
-        '''
-      }
-    }
-  }
-
-  post {
-    always {
-      echo "Pipeline finished!"
-    }
-  }
 }
