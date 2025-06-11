@@ -5,7 +5,7 @@ pipeline {
         AWS_CLI = "/usr/local/bin/aws"
         SECRET_ID = "myapp/hello-world"
         REGION = "ap-south-1"
-        PATH = "/opt/homebrew/bin:$PATH"  // So Jenkins can find jq
+        PATH = "/usr/local/bin:/opt/homebrew/bin:$PATH"  // So Jenkins can find jq
     }
 
     stages {
@@ -45,6 +45,13 @@ pipeline {
                 }
             }
         }
+	stage('Debug Paths') {
+ 	   steps {
+        	sh 'which aws && aws --version'
+        	sh 'which jq && jq --version'
+        	sh 'which docker && docker --version'
+    }
+}
 
         stage('Docker Build') {
             steps {
