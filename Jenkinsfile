@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    AWS_CLI = "/Users/satyajitbarick/jenkins-awscli/bin/aws"
+    AWS_CLI = "/opt/homebrew/bin/aws"
     IMAGE_NAME = "hello-secrets"
     AWS_REGION = "ap-south-1"
     SECRET_ID  = "myapp/hello-world"
