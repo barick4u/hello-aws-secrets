@@ -15,16 +15,35 @@ pipeline {
         }
 
         stage('Fetch AWS Secret') {
-            steps {
-                script {
-                    def secret = sh(
-                        script: "${AWS_CLI} secretsmanager get-secret-value --region ${REGION} --secret-id ${SECRET_ID} --query SecretString --output text",
-                        returnStdout: true
-                    ).trim()
-                    echo "Fetched secret: ${secret}" // Don't do this in real prod pipelines (for security)
-                }
-            }
-        }
+            #steps {
+                #script {
+               #     def secret = sh(
+              #          script: "${AWS_CLI} secretsmanager get-secret-value --region ${REGION} --secret-id ${SECRET_ID} --query SecretString --output text",
+             #           returnStdout: true
+            #        ).trim()
+           #         echo "Fetched secret: ${secret}" // Don't do this in real prod pipelines (for security)
+          #      }
+         #   }
+        #}
+	steps {
+        sh '''
+          echo "Fetching secrets from AWS..."
+          SECRET=$(aws secretsmanager get-secret-value \
+            --region ap-south-1 \
+            --secret-id myapp/hello-world \
+            --query SecretString \
+            --output text)
+
+          USERNAME=$(echo "$SECRET" | jq -r '.username')
+          PASSWORD=$(echo "$SECRET" | jq -r '.password')
+
+          echo "Username: $USERNAME"
+          echo "Password: $PASSWORD"
+        '''
+      }
+    }
+  }
+}
 
         stage('Docker Build') {
             steps {
