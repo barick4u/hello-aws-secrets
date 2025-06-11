@@ -17,7 +17,7 @@ pipeline {
     stage('Fetch AWS Secret') {
       steps {
         script {
-          def secret = sh(script: "aws secretsmanager get-secret-value --region $AWS_REGION --secret-id $SECRET_ID --query SecretString --output text", returnStdout: true).trim()
+          def secret = sh(script: "/opt/homebrew/bin/aws secretsmanager get-secret-value --region ${AWS_REGION} --secret-id ${SECRET_ID} --query SecretString --output text", returnStdout: true).trim()
           def creds = readJSON text: secret
           env.MY_SECRET_USER = creds.username
           env.MY_SECRET_PASS = creds.password
