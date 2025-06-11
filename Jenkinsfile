@@ -2,9 +2,10 @@ pipeline {
     agent any
 
     environment {
-        AWS_CLI = "/usr/local/bin/aws"  // Adjust if path differs
+        AWS_CLI = "/usr/local/bin/aws"
         SECRET_ID = "myapp/hello-world"
         REGION = "ap-south-1"
+        PATH = "/opt/homebrew/bin:$PATH" // Ensure jq is available
     }
 
     stages {
@@ -15,35 +16,23 @@ pipeline {
         }
 
         stage('Fetch AWS Secret') {
-            #steps {
-                #script {
-               #     def secret = sh(
-              #          script: "${AWS_CLI} secretsmanager get-secret-value --region ${REGION} --secret-id ${SECRET_ID} --query SecretString --output text",
-             #           returnStdout: true
-            #        ).trim()
-           #         echo "Fetched secret: ${secret}" // Don't do this in real prod pipelines (for security)
-          #      }
-         #   }
-        #}
-	steps {
-        sh '''
-          echo "Fetching secrets from AWS..."
-          SECRET=$(aws secretsmanager get-secret-value \
-            --region ap-south-1 \
-            --secret-id myapp/hello-world \
-            --query SecretString \
-            --output text)
+            steps {
+                sh '''
+                echo "Fetching secrets from AWS..."
+                SECRET=$($AWS_CLI secretsmanager get-secret-value \
+                  --region $REGION \
+                  --secret-id $SECRET_ID \
+                  --query SecretString \
+                  --output text)
 
-          USERNAME=$(echo "$SECRET" | jq -r '.username')
-          PASSWORD=$(echo "$SECRET" | jq -r '.password')
+                USERNAME=$(echo "$SECRET" | jq -r '.username')
+                PASSWORD=$(echo "$SECRET" | jq -r '.password')
 
-          echo "Username: $USERNAME"
-          echo "Password: $PASSWORD"
-        '''
-      }
-    }
-  }
-}
+                echo "Username: $USERNAME"
+                echo "Password: $PASSWORD"
+                '''
+            }
+        }
 
         stage('Docker Build') {
             steps {
@@ -53,7 +42,7 @@ pipeline {
 
         stage('Scan with Trivy') {
             steps {
-                sh 'trivy image hello-aws-secret || true'  // ignore failure if Trivy not installed
+                sh 'trivy image hello-aws-secret || true'
             }
         }
 
