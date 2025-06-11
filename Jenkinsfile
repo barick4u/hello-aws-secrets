@@ -5,7 +5,7 @@ pipeline {
         AWS_CLI = "/usr/local/bin/aws"
         SECRET_ID = "myapp/hello-world"
         REGION = "ap-south-1"
-        PATH = "/opt/homebrew/bin:$PATH" // Ensure jq is available
+        PATH = "/opt/homebrew/bin:$PATH"  // So Jenkins can find jq
     }
 
     stages {
@@ -17,20 +17,32 @@ pipeline {
 
         stage('Fetch AWS Secret') {
             steps {
-                sh '''
-                echo "Fetching secrets from AWS..."
-                SECRET=$($AWS_CLI secretsmanager get-secret-value \
-                  --region $REGION \
-                  --secret-id $SECRET_ID \
-                  --query SecretString \
-                  --output text)
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-creds',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    )
+                ]) {
+                    sh '''
+                        echo "Fetching secrets from AWS..."
 
-                USERNAME=$(echo "$SECRET" | jq -r '.username')
-                PASSWORD=$(echo "$SECRET" | jq -r '.password')
+                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
-                echo "Username: $USERNAME"
-                echo "Password: $PASSWORD"
-                '''
+                        SECRET=$($AWS_CLI secretsmanager get-secret-value \
+                            --region $REGION \
+                            --secret-id $SECRET_ID \
+                            --query SecretString \
+                            --output text)
+
+                        USERNAME=$(echo "$SECRET" | jq -r '.username')
+                        PASSWORD=$(echo "$SECRET" | jq -r '.password')
+
+                        echo "Username: $USERNAME"
+                        echo "Password: $PASSWORD"
+                    '''
+                }
             }
         }
 
