@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     IMAGE_NAME = "hello-secrets"
-    AWS_REGION = "us-east-1"
+    AWS_REGION = "ap-south-1"
     SECRET_ID  = "myapp/hello-world"
   }
 
